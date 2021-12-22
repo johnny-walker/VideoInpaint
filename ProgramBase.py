@@ -16,6 +16,10 @@ class PgmBase(tk.Frame):
     btnPause = None
     btnSnap = None
 
+    mouseLDown = False
+    imgPosX = 0
+    imgPosY = 0
+
     def __init__(self, root, width=640, height=480):
         super().__init__(root)
         self.root = root
@@ -45,7 +49,6 @@ class PgmBase(tk.Frame):
         self.bindBtnEvents()
 
     def bindBtnEvents(self):
-            
         self.root.protocol("WM_DELETE_WINDOW", self.onExit)
         self.root.bind("<Configure>", self.onResize)
         self.root.bind_all('<Key>', self.onKey)                 # pure virtual
@@ -57,17 +60,30 @@ class PgmBase(tk.Frame):
         
         # mouse events
         self.root.bind('<Motion>', self.mouseMove)              #debug 
-        self.root.bind("<Button-1>", self.mouseLClick)
+        self.root.bind("<Button-1>", self.mouseLDown)
+        self.root.bind("<ButtonRelease-1>", self.mouseLRelease)
     
     def mouseMove(self, event):
         x, y = event.x, event.y
-        print('{}, {}'.format(x, y))
-        msg = '({:d}, {:d})'.format(x-self.imageStartPos[0], y-self.imageStartPos[1])
+        #print('{}, {}'.format(x, y))
+        self.imgPosX = x-self.imageStartPos[0]
+        self.imgPosY = y-self.imageStartPos[1]
+        msg = '({:d}, {:d})'.format(self.imgPosX, self.imgPosY)
         self.lblMsg['text'] = msg
-
-    def mouseLClick(self, event):
+    
+    def mouseLDown(self, event):
+        print('mouseLDown')
+        self.mouseLDown = True
         x, y = event.x, event.y
         self.imageClickPos = (x-self.imageStartPos[0], y-self.imageStartPos[1])
+        self.mouseLClick(event)
+
+    def mouseLClick(self, event):
+        None
+
+    def mouseLRelease(self, event):
+        print('mouseLRelease')
+        self.mouseLDown = False
 
     def hitTestImageRect(self, pt):
         x1, y1 = 0, 0
@@ -147,8 +163,8 @@ class PgmBase(tk.Frame):
 
         self.canvas.update()
         self.imgWidth = self.canvas.winfo_width() - self.padding * 2
-        self.imgHeight = self.canvas.winfo_height() - self.padding * 2
-        print(self.imgWidth, self.imgHeight)
+        self.imgHeight = self.canvas.winfo_height() - self.padding * 5
+        print("image size =", self.imgWidth, self.imgHeight)
 
     def showMessage(self, msg):
         self.lblMsg['text'] = msg

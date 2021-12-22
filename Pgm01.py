@@ -13,25 +13,21 @@ from ProgramBase import PgmBase
 from ThreadBase import ThreadClass
 from PixelUtil import Pixels
 
-
 class VideoInpaint(PgmBase):
     videoObject = None
     videofile = None
-    drawnframe = None
-    firstFrame = True
-    frame = None
+    curFrame = None
     frameIndex = 0
-    videoFrames = []
-    
+    videoFrames = []    
 
     drawRectangle = True
     isSelection = True
     selectionPts = []               # at most 4 points, original user selection points
     circles = []                    # at most 4 circles, keep the drawn ids
     idRectangle = -1
+    drawing = False
 
     alpha = 1.0
-
     debugPoints = None
     
     def __init__(self, root, width=800, height=600):
@@ -74,7 +70,7 @@ class VideoInpaint(PgmBase):
             elif event.keysym == 's' or event.keysym == 'p':
                 self.onPlay()
             elif event.keysym == 'space':
-                self.onPause()     
+                self.onSpace()     
             elif event.keysym == 'Escape':
                 self.onExit()
     
@@ -86,6 +82,9 @@ class VideoInpaint(PgmBase):
     
     def onH(self):
         None  
+    
+    def onSpace(self):
+        self.isSelection = False
 
     def onExit(self):
         def _quit():
@@ -105,12 +104,6 @@ class VideoInpaint(PgmBase):
             self.showMessage("playback video file: {0:s}".format(self.videofile))
             self.startThread()
 
-   
-    def mouseLClick(self, event):
-        super().mouseLClick(event) 
-        if self.hitTestImageRect(self.imageClickPos):
-            print('({}, {})'.format(self.imageClickPos[0], self.imageClickPos[1]))
-            self.updateCloudPoints(self.imageClickPos)
 
     ### --- thread function ---
     def startThread(self):
@@ -123,11 +116,11 @@ class VideoInpaint(PgmBase):
     def initVideoFrame(self):
         self.videoObject = cv2.VideoCapture(self.videofile)
         if self.videoObject.isOpened():
-            ret, self.frame = self.videoObject.read()
+            ret, frame = self.videoObject.read()
             if ret:
-                self.frame = self.resize(self.frame)
-                self.videoFrames.append(self.frame)
-                self.drawFrame()  # draw first frame
+                self.curFrame = self.resize(frame)
+                self.videoFrames.append(self.curFrame)
+                self.drawFrame()  # draw current frame
             return ret
         return False
     
@@ -136,8 +129,8 @@ class VideoInpaint(PgmBase):
             ret, frame = self.videoObject.read()
             if ret:
                 self.frameIndex += 1
-                self.frame = self.resize(frame)
-                self.videoFrames.append(self.frame)
+                frame = self.resize(frame)
+                self.videoFrames.append(frame)
             else:
                 return False # break
             return True   # continue reading
@@ -156,7 +149,7 @@ class VideoInpaint(PgmBase):
     ### --- update frame content---
     def drawFrame(self):
         # draw on canvas
-        self.updateImage(self.frame)
+        self.updateImage(self.curFrame)
         if self.drawRectangle:
             self.drawRect(self.selectionPts)
  
@@ -216,7 +209,19 @@ class VideoInpaint(PgmBase):
         x1, y1 = x+r, y+r
         return canvas.create_oval(x0, y0, x1, y1, fill="orange", outline='orange', width=3)
 
- 
+    def mouseLClick(self, event):
+        if self.isSelection:
+            if self.hitTestImageRect(self.imageClickPos):
+                print('({}, {})'.format(self.imageClickPos[0], self.imageClickPos[1]))
+                self.updateCloudPoints(self.imageClickPos)
+
+    def mouseMove(self, event):
+        super().mouseMove(event) 
+        if not self.isSelection and self.mouseLDown:
+            print('painting', self.imgPosX, self.imgPosY)
+            cv2.circle(self.curFrame, (self.imgPosX, self.imgPosY), 10, (0,0,255), -1)
+            self.drawFrame()
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--image', default='data/cheetah', help="input folder")
@@ -232,6 +237,6 @@ if __name__ == '__main__':
     '''
     args = parser.parse_args()
 
-    program = VideoInpaint(tk.Tk(), 1280, 800)
+    program = VideoInpaint(tk.Tk(), 1280, 720)
     program.openVideo(args.video)
     program.run()

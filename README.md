@@ -1,4 +1,4 @@
-# OptFlow Survey
+# Video Inpaint Testbed
 A simple program developed with tkinter module\
-Video Viewer derived from ProgramBase\
-some scripts for feature detection, flow applicatioin
+Video Frame Viewer derived from ProgramBase\
+calculation of mouse's window coordinate mapping to image coordinate
