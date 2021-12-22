@@ -29,16 +29,18 @@ class VideoInpaint(PgmBase):
     circles = []                    # at most 4 circles, keep the drawn ids
     idRectangle = -1
 
+    blending = False
     alpha = 1.0
     debugPoints = None
     isBrushing = False
     brushSize = 10
 
     
-    def __init__(self, root, width=800, height=600):
+    def __init__(self, root, width=800, height=600, args=[]):
         super().__init__(root, width, height)
         self.title = 'Frame Viewer'
         self.root.title(self.title)
+        self.args = args
 
         # initi thread for video playback
         self.thread = None
@@ -54,18 +56,16 @@ class VideoInpaint(PgmBase):
 
     def loadData(self, data, mask):
         # load video
-        filename_list = glob.glob(os.path.join(args.data, '*.png')) + \
-                        glob.glob(os.path.join(args.data, '*.jpg'))
+        filename_list = glob.glob(os.path.join(data, '*.png')) + \
+                        glob.glob(os.path.join(data, '*.jpg'))
 
-        drawFirstFrame = True
+        firstFrame = True
         for filename in sorted(filename_list):
             frame = self.loadImage(filename)
             self.videoFrames.append(frame)
-            if drawFirstFrame:
+            if firstFrame:
                 self.curFrame = frame
-                self.drawFrame()  
-                print(frame.shape) 
-                drawFirstFrame = False
+                firstFrame = False
 
 
         # load frame mask list.
@@ -73,16 +73,27 @@ class VideoInpaint(PgmBase):
                         glob.glob(os.path.join(mask, '*.jpg'))
 
         # load mask
+        firstMask = True
         for filename in sorted(filename_list):
             frame_mask = self.loadImage(filename)
             self.maskFrames.append(frame_mask)
+            if firstMask:
+                self.curMask = frame_mask
+                firstMask = False
+                self.drawFrame()  
 
 
     ### --- overrite button handlers ---
     def onBrush(self):
+        self.isSelection = False
         self.isBrushing = not self.isBrushing
         self.changeStyle('brush', self.isBrushing)
+    
+    def onBlend(self):
         self.isSelection = False
+        self.blending = not self.blending
+        self.changeStyle('blend', self.blending)
+        self.drawFrame()  
 
     def onReset(self):
         self.threadEventPlayback.clear()
@@ -184,6 +195,11 @@ class VideoInpaint(PgmBase):
     ### --- update frame content---
     def drawFrame(self):
         # draw on canvas
+        self.curFrame = self.videoFrames[self.frameIndex].copy()
+        if self.blending:
+            beta = ( 1.0 - self.args.alpha )
+            cv2.addWeighted( self.curFrame, self.args.alpha, self.curMask, beta, 0.0, self.curFrame)
+            
         self.updateImage(self.curFrame)
         if self.drawRectangle:
             self.drawRect(self.selectionPts)
@@ -269,7 +285,7 @@ if __name__ == '__main__':
     parser.add_argument('--data', default='data/tennis', help="input data folder")
     parser.add_argument('--mask', default='data/tennis_mask', help="input data mask folder")
     parser.add_argument('--video', default='data/cheetah.mp4', help="input video")
-    parser.add_argument('--alpha', default=0.6, help="alpha blending") 
+    parser.add_argument('--alpha', default=0.8, help="alpha blending") 
 
     # RAFT model arguments
     '''
@@ -288,10 +304,10 @@ if __name__ == '__main__':
         img = cv2.imread(filename_list[0])
         height, width = img.shape[0], img.shape[1]
         img = None
-        program = VideoInpaint(tk.Tk(), width, height)
+        program = VideoInpaint(tk.Tk(), width, height, args)
         program.loadData(args.data, args.mask)
     else:   # process video
-        program = VideoInpaint(tk.Tk(), 1280, 720)
+        program = VideoInpaint(tk.Tk(), 1280, 720, args)
         program.openVideo(args.video)
     
     program.run()

@@ -53,6 +53,8 @@ class PgmBase(tk.Frame):
         btn = None
         if widget == 'brush':
             btn = self.btnBrush
+        elif widget == 'blend':
+            btn = self.btnBlend
 
         if btn is not None:
             if active:
@@ -65,6 +67,7 @@ class PgmBase(tk.Frame):
         self.root.bind("<Configure>", self.onResize)
         self.root.bind_all('<Key>', self.onKey)                 # pure virtual
         self.btnBrush['command'] = lambda : self.onBrush()      # pure virtual
+        self.btnBlend['command'] = lambda : self.onBlend()      # pure virtual
         self.btnReset['command'] = lambda : self.onReset()      # pure virtual
         self.btnSave['command'] = lambda : self.onSave()        # pure virtual
       
@@ -92,10 +95,11 @@ class PgmBase(tk.Frame):
 
     # virtual func
     def mouseLClick(self, event):
-        print('mouseLClick')
+        #print('mouseLClick')
+        None
 
     def mouseLRelease(self, event):
-        print('mouseLRelease')
+        #print('mouseLRelease')
         self.mouseLDown = False
     
     # virtual func
@@ -158,9 +162,11 @@ class PgmBase(tk.Frame):
         self.root.rowconfigure(0, weight=1)
         self.root.columnconfigure(0, weight=1)
 
-
         self.btnBrush = tk.Button(divBtnArea, text='brush')
         self.btnBrush.pack(side='left')
+
+        self.btnBlend = tk.Button(divBtnArea, text='blend')
+        self.btnBlend.pack(side='left')
 
         self.btnReset = tk.Button(divBtnArea, text='reset')
         self.btnReset.pack(side='left')
@@ -183,6 +189,10 @@ class PgmBase(tk.Frame):
     # virtual func
     def onBrush(self):
         print('onBrush')
+    
+    # virtual func
+    def onBlend(self):
+        print('onBlend')
 
     def loadImage(self, path):
         img = cv2.imread(path)
