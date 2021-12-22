@@ -25,10 +25,12 @@ class VideoInpaint(PgmBase):
     selectionPts = []               # at most 4 points, original user selection points
     circles = []                    # at most 4 circles, keep the drawn ids
     idRectangle = -1
-    drawing = False
 
     alpha = 1.0
     debugPoints = None
+    isBrushing = False
+    brushSize = 10
+
     
     def __init__(self, root, width=800, height=600):
         super().__init__(root, width, height)
@@ -42,8 +44,9 @@ class VideoInpaint(PgmBase):
         self.pixels = Pixels()
 
     ### --- overrite button handlers ---
-    def onOpen(self):
-        None
+    def onBrush(self):
+        self.isBrushing = not self.isBrushing
+        self.changeStyle('brush', self.isBrushing)
 
     def onReset(self):
         self.threadEventPlayback.clear()
@@ -57,6 +60,8 @@ class VideoInpaint(PgmBase):
                 self.canvas.delete(id)
             self.circles = []
 
+    def onSave(self):
+        None
 
     ### --- event handlers ---
     def onKey(self, event):
@@ -217,10 +222,17 @@ class VideoInpaint(PgmBase):
 
     def mouseMove(self, event):
         super().mouseMove(event) 
-        if not self.isSelection and self.mouseLDown:
-            print('painting', self.imgPosX, self.imgPosY)
-            cv2.circle(self.curFrame, (self.imgPosX, self.imgPosY), 10, (0,0,255), -1)
+        if not self.isSelection and self.isBrushing and self.mouseLDown:
+            #print('painting', self.imgPosX, self.imgPosY)
+            color = (0,0,255)
+            cv2.circle(self.curFrame, (self.imgPosX, self.imgPosY), self.brushSize, color, -1)
             self.drawFrame()
+    
+    def mouseWheel(self, event):
+        if self.isBrushing:
+            self.brushSize += event.delta
+            self.brushSize = max (3, self.brushSize)
+            self.showMessage("brush size = {0:03d}".format(self.brushSize))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

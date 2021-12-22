@@ -29,8 +29,9 @@ class PgmBase(tk.Frame):
         # configure window
         screen_width = root.winfo_screenwidth()
         screen_height = root.winfo_screenheight()
-        x = (screen_width - width)//2
-        y = (screen_height - height)//2
+        center = False
+        x = (screen_width - width)//2 if center else 0
+        y = (screen_height - height)//2 if center else 0
         self.border = 2
         self.padding = 2
         self.title = 20
@@ -47,21 +48,33 @@ class PgmBase(tk.Frame):
 
         self.loadLayout()
         self.bindBtnEvents()
+    
+    def changeStyle(self, widget, active):
+        btn = None
+        if widget == 'brush':
+            btn = self.btnBrush
+
+        if btn is not None:
+            if active:
+                btn.configure(foreground = 'purple')
+            else:
+                btn.configure(foreground = 'black')
 
     def bindBtnEvents(self):
         self.root.protocol("WM_DELETE_WINDOW", self.onExit)
         self.root.bind("<Configure>", self.onResize)
         self.root.bind_all('<Key>', self.onKey)                 # pure virtual
-        self.btnOpen['command'] = lambda : self.onOpen()
+        self.btnBrush['command'] = lambda : self.onBrush()       # pure virtual
         self.btnReset['command'] = lambda : self.onReset()      # pure virtual
-        self.btnPlay['command'] = lambda : self.onPlay()        # pure virtual
-        self.btnPause['command'] = lambda : self.onPause()      # pure virtual
-        self.btnSnap['command'] = lambda : self.onSnap()        # pure virtual
+        self.btnSave['command'] = lambda : self.onSave()        # pure virtual
+      
         
         # mouse events
-        self.root.bind('<Motion>', self.mouseMove)              #debug 
+        self.root.bind('<Motion>', self.mouseMove)              
         self.root.bind("<Button-1>", self.mouseLDown)
         self.root.bind("<ButtonRelease-1>", self.mouseLRelease)
+        self.root.bind("<MouseWheel>", self.mouseWheel)
+
     
     def mouseMove(self, event):
         x, y = event.x, event.y
@@ -72,18 +85,22 @@ class PgmBase(tk.Frame):
         self.lblMsg['text'] = msg
     
     def mouseLDown(self, event):
-        print('mouseLDown')
         self.mouseLDown = True
         x, y = event.x, event.y
         self.imageClickPos = (x-self.imageStartPos[0], y-self.imageStartPos[1])
         self.mouseLClick(event)
 
+    # virtual func
     def mouseLClick(self, event):
-        None
+        print('mouseLClick')
 
     def mouseLRelease(self, event):
         print('mouseLRelease')
         self.mouseLDown = False
+    
+    # virtual func
+    def mouseWheel(self, event):
+        print (event.delta)
 
     def hitTestImageRect(self, pt):
         x1, y1 = 0, 0
@@ -142,20 +159,14 @@ class PgmBase(tk.Frame):
         self.root.columnconfigure(0, weight=1)
 
 
-        self.btnOpen = tk.Button(divBtnArea, text='open')
-        self.btnOpen.pack(side='left')
+        self.btnBrush = tk.Button(divBtnArea, text='brush')
+        self.btnBrush.pack(side='left')
 
         self.btnReset = tk.Button(divBtnArea, text='reset')
         self.btnReset.pack(side='left')
 
-        self.btnPlay = tk.Button(divBtnArea, text='play')
-        self.btnPlay.pack(side='left')
-
-        self.btnPause = tk.Button(divBtnArea, text='pause')
-        self.btnPause.pack(side='left')
-
-        self.btnSnap = tk.Button(divBtnArea, text='snapshot')
-        self.btnSnap.pack(side='left')
+        self.btnSave = tk.Button(divBtnArea, text='save')
+        self.btnSave.pack(side='left')
 
         # label as message
         self.lblMsg = tk.Label(divMsg, text='show message here', bg='black', fg='white')
@@ -169,11 +180,9 @@ class PgmBase(tk.Frame):
     def showMessage(self, msg):
         self.lblMsg['text'] = msg
         
-    def onOpen(self):
-        self.videofile =  filedialog.askopenfilename(initialdir="./", title="Select a file")
-        if self.videofile:
-            self.showMessage("open file {0:s}".format(self.videofile))
-            self.loadImage(self.videofile)
+    # virtual func
+    def onBrush(self):
+        print('onBrush')
 
     def loadImage(self, path):
         img = cv2.imread(path)
