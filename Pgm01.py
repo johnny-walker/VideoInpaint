@@ -84,6 +84,18 @@ class VideoInpaint(PgmBase):
 
 
     ### --- overrite button handlers ---
+    # virtual func
+    def onPrev(self):
+        if self.frameIndex > 0 :
+            self.frameIndex = self.frameIndex-1
+            self.drawFrame()  
+    
+    # virtual func
+    def onNext(self):
+        if self.frameIndex < len(self.videoFrames)-1 :
+            self.frameIndex = self.frameIndex+1
+            self.drawFrame()  
+
     def onBrush(self):
         self.isSelection = False
         self.isBrushing = not self.isBrushing
@@ -196,6 +208,7 @@ class VideoInpaint(PgmBase):
     def drawFrame(self):
         # draw on canvas
         self.curFrame = self.videoFrames[self.frameIndex].copy()
+        self.curMask = self.maskFrames[self.frameIndex].copy()
         if self.blending:
             beta = ( 1.0 - self.args.alpha )
             cv2.addWeighted( self.curFrame, self.args.alpha, self.curMask, beta, 0.0, self.curFrame)

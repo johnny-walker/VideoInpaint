@@ -66,6 +66,8 @@ class PgmBase(tk.Frame):
         self.root.protocol("WM_DELETE_WINDOW", self.onExit)
         self.root.bind("<Configure>", self.onResize)
         self.root.bind_all('<Key>', self.onKey)                 # pure virtual
+        self.btnPrev['command'] = lambda : self.onPrev()        # pure virtual
+        self.btnNext['command'] = lambda : self.onNext()        # pure virtual
         self.btnBrush['command'] = lambda : self.onBrush()      # pure virtual
         self.btnBlend['command'] = lambda : self.onBlend()      # pure virtual
         self.btnReset['command'] = lambda : self.onReset()      # pure virtual
@@ -162,6 +164,12 @@ class PgmBase(tk.Frame):
         self.root.rowconfigure(0, weight=1)
         self.root.columnconfigure(0, weight=1)
 
+        self.btnPrev = tk.Button(divBtnArea, text='prev')
+        self.btnPrev.pack(side='left')
+
+        self.btnNext = tk.Button(divBtnArea, text='next')
+        self.btnNext.pack(side='left')
+
         self.btnBrush = tk.Button(divBtnArea, text='brush')
         self.btnBrush.pack(side='left')
 
@@ -187,9 +195,17 @@ class PgmBase(tk.Frame):
         self.lblMsg['text'] = msg
         
     # virtual func
+    def onPrev(self):
+        print('onPrev')
+    
+    # virtual func
+    def onNext(self):
+        print('onNext')
+    
+    # virtual func
     def onBrush(self):
         print('onBrush')
-    
+
     # virtual func
     def onBlend(self):
         print('onBlend')
