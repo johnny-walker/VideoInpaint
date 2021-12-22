@@ -7,6 +7,7 @@ import cv2
 #import numpy as np
 import threading
 #import time
+import glob
 
 # import own modules
 from ProgramBase import PgmBase
@@ -17,8 +18,10 @@ class VideoInpaint(PgmBase):
     videoObject = None
     videofile = None
     curFrame = None
+    curMask = None
     frameIndex = 0
     videoFrames = []    
+    maskFrames = []    
 
     drawRectangle = True
     isSelection = True
@@ -43,10 +46,43 @@ class VideoInpaint(PgmBase):
 
         self.pixels = Pixels()
 
+    def openVideo(self, path):
+        self.videofile = path
+        if self.videofile:
+            self.showMessage("playback video file: {0:s}".format(self.videofile))
+            self.startThread()
+
+    def loadData(self, data, mask):
+        # load video
+        filename_list = glob.glob(os.path.join(args.data, '*.png')) + \
+                        glob.glob(os.path.join(args.data, '*.jpg'))
+
+        drawFirstFrame = True
+        for filename in sorted(filename_list):
+            frame = self.loadImage(filename)
+            self.videoFrames.append(frame)
+            if drawFirstFrame:
+                self.curFrame = frame
+                self.drawFrame()  
+                print(frame.shape) 
+                drawFirstFrame = False
+
+
+        # load frame mask list.
+        filename_list = glob.glob(os.path.join(mask, '*.png')) + \
+                        glob.glob(os.path.join(mask, '*.jpg'))
+
+        # load mask
+        for filename in sorted(filename_list):
+            frame_mask = self.loadImage(filename)
+            self.maskFrames.append(frame_mask)
+
+
     ### --- overrite button handlers ---
     def onBrush(self):
         self.isBrushing = not self.isBrushing
         self.changeStyle('brush', self.isBrushing)
+        self.isSelection = False
 
     def onReset(self):
         self.threadEventPlayback.clear()
@@ -103,13 +139,6 @@ class VideoInpaint(PgmBase):
 
         _quit()
 
-    def openVideo(self, path):
-        self.videofile = path
-        if self.videofile:
-            self.showMessage("playback video file: {0:s}".format(self.videofile))
-            self.startThread()
-
-
     ### --- thread function ---
     def startThread(self):
         if self.videofile:
@@ -118,18 +147,19 @@ class VideoInpaint(PgmBase):
             self.threadEventPlayback.clear() 
             self.thread.start()
 
-    def initVideoFrame(self):
-        self.videoObject = cv2.VideoCapture(self.videofile)
-        if self.videoObject.isOpened():
-            ret, frame = self.videoObject.read()
-            if ret:
-                self.curFrame = self.resize(frame)
-                self.videoFrames.append(self.curFrame)
-                self.drawFrame()  # draw current frame
-            return ret
-        return False
-    
+   
     def readVideoFrame(self):
+        def initVideoFrame():
+            self.videoObject = cv2.VideoCapture(self.videofile)
+            if self.videoObject.isOpened():
+                ret, frame = self.videoObject.read()
+                if ret:
+                    self.curFrame = self.resize(frame)
+                    self.videoFrames.append(self.curFrame)
+                    self.drawFrame()  # draw current frame
+                return ret
+            return False
+
         def readFrame():
             ret, frame = self.videoObject.read()
             if ret:
@@ -140,7 +170,7 @@ class VideoInpaint(PgmBase):
                 return False # break
             return True   # continue reading
                     
-        ret = self.initVideoFrame()
+        ret = initVideoFrame()
         if ret:
             while ret: 
                 ret = readFrame()
@@ -231,12 +261,13 @@ class VideoInpaint(PgmBase):
     def mouseWheel(self, event):
         if self.isBrushing:
             self.brushSize += event.delta
-            self.brushSize = max (3, self.brushSize)
+            self.brushSize = max(self.brushSize, 3)
             self.showMessage("brush size = {0:03d}".format(self.brushSize))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--image', default='data/cheetah', help="input folder")
+    parser.add_argument('--data', default='data/tennis', help="input data folder")
+    parser.add_argument('--mask', default='data/tennis_mask', help="input data mask folder")
     parser.add_argument('--video', default='data/cheetah.mp4', help="input video")
     parser.add_argument('--alpha', default=0.6, help="alpha blending") 
 
@@ -249,6 +280,18 @@ if __name__ == '__main__':
     '''
     args = parser.parse_args()
 
-    program = VideoInpaint(tk.Tk(), 1280, 720)
-    program.openVideo(args.video)
+    # process first file to get shape
+    filename_list = glob.glob(os.path.join(args.data, '*.png')) + \
+                    glob.glob(os.path.join(args.data, '*.jpg'))
+    
+    if len(filename_list) > 0:
+        img = cv2.imread(filename_list[0])
+        height, width = img.shape[0], img.shape[1]
+        img = None
+        program = VideoInpaint(tk.Tk(), width, height)
+        program.loadData(args.data, args.mask)
+    else:   # process video
+        program = VideoInpaint(tk.Tk(), 1280, 720)
+        program.openVideo(args.video)
+    
     program.run()

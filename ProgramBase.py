@@ -64,7 +64,7 @@ class PgmBase(tk.Frame):
         self.root.protocol("WM_DELETE_WINDOW", self.onExit)
         self.root.bind("<Configure>", self.onResize)
         self.root.bind_all('<Key>', self.onKey)                 # pure virtual
-        self.btnBrush['command'] = lambda : self.onBrush()       # pure virtual
+        self.btnBrush['command'] = lambda : self.onBrush()      # pure virtual
         self.btnReset['command'] = lambda : self.onReset()      # pure virtual
         self.btnSave['command'] = lambda : self.onSave()        # pure virtual
       
@@ -187,8 +187,8 @@ class PgmBase(tk.Frame):
     def loadImage(self, path):
         img = cv2.imread(path)
         im = self.resize(img)
-        self.updateImage(im)
         self.showMessage("file {0:s} loaded".format(path))
+        return im
 
     # img : cv image
     def updateImage(self, img, forceCreate=False):
