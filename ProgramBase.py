@@ -49,7 +49,7 @@ class PgmBase(tk.Frame):
         self.loadLayout()
         self.bindBtnEvents()
     
-    def changeStyle(self, widget, active):
+    def changeBtnStyle(self, widget, active):
         btn = None
         if widget == 'brush':
             btn = self.btnBrush
@@ -90,18 +90,22 @@ class PgmBase(tk.Frame):
 
     
     def mouseMove(self, event):
-        x, y = event.x, event.y
-        #print('{}, {}'.format(x, y))
-        self.imgPosX = x-self.imageStartPos[0]
-        self.imgPosY = y-self.imageStartPos[1]
-        msg = '({:d}, {:d})'.format(self.imgPosX, self.imgPosY)
-        self.lblMsg['text'] = msg
+        if event.widget == self.canvas:
+            x, y = event.x, event.y
+            #print('{}, {}'.format(x, y))
+            self.imgPosX = x-self.imageStartPos[0]
+            self.imgPosY = y-self.imageStartPos[1]
+
+            # show image pixel location
+            msg = '({:d}, {:d})'.format(self.imgPosX, self.imgPosY)
+            self.lblMsg['text'] = msg
     
     def mouseLDown(self, event):
-        self.mouseLeftDown = True
-        x, y = event.x, event.y
-        self.imageClickPos = (x-self.imageStartPos[0], y-self.imageStartPos[1])
-        self.mouseLClick(event)
+        if event.widget == self.canvas:
+            self.mouseLeftDown = True
+            x, y = event.x, event.y
+            self.imageClickPos = (x-self.imageStartPos[0], y-self.imageStartPos[1])
+            self.mouseLClick(event)
 
     def mouseLRelease(self, event):
         self.mouseLeftDown = False
@@ -114,13 +118,14 @@ class PgmBase(tk.Frame):
     def mouseWheel(self, event):
         print (event.delta)
 
-    def hitTestImageRect(self, pt):
-        x1, y1 = 0, 0
-        x2, y2 = x1+self.imgResize[0], y1+self.imgResize[1]
-        x, y = pt
-        if (x1 < x and x < x2):
-            if (y1 < y and y < y2):
-                return True
+    def hitTestImageRect(self, event,pt):
+        if event.widget == self.canvas:
+            x1, y1 = 0, 0
+            x2, y2 = x1+self.imgResize[0], y1+self.imgResize[1]
+            x, y = pt
+            if (x1 < x and x < x2):
+                if (y1 < y and y < y2):
+                    return True
         return False
 
     def onResize(self, event):

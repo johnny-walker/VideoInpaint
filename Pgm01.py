@@ -97,9 +97,9 @@ class VideoInpaint(PgmBase):
             self.refreshFrame()  
 
     def updateBrushStyle(self):
-        self.changeStyle('brush', self.isBrushing)
-        self.changeStyle('brush_add', self.isBrushing and self.isBrushAdd)
-        self.changeStyle('brush_erase', self.isBrushing and not self.isBrushAdd)
+        self.changeBtnStyle('brush', self.isBrushing)
+        self.changeBtnStyle('brush_add', self.isBrushing and self.isBrushAdd)
+        self.changeBtnStyle('brush_erase', self.isBrushing and not self.isBrushAdd)
     
     def autoEnableBlending(self):
         # auto enable blending, as brush is used to change mask
@@ -137,7 +137,7 @@ class VideoInpaint(PgmBase):
         self.autoBlending = False
         self.isSelection = False
         self.blending = not self.blending
-        self.changeStyle('blend', self.blending)
+        self.changeBtnStyle('blend', self.blending)
         self.drawFrame()  
 
     def onReset(self):
@@ -170,18 +170,18 @@ class VideoInpaint(PgmBase):
     
     def onKeyArrors(self, keysym):
         if keysym == 'Left' :
-            self.onPrev()
+            self.frameIndex = max(self.frameIndex-5, 0)
         elif keysym == 'Right' :
-            self.onNext()
-        else:
-            if keysym == 'Up' :
-                self.frameIndex = 0
-            elif keysym == 'Down' :
-                self.frameIndex = len(self.videoFrames)-1
-            self.refreshFrame() 
+            self.frameIndex = min(self.frameIndex+5, len(self.videoFrames)-1)
+        elif keysym == 'Up' :
+            self.frameIndex = 0
+        elif keysym == 'Down' :
+            self.frameIndex = len(self.videoFrames)-1
+        self.refreshFrame() 
 
     def onSpace(self):
         self.isSelection = False
+        self.destroyDrawObjects()
 
     def onExit(self):
         def _quit():
@@ -239,7 +239,7 @@ class VideoInpaint(PgmBase):
     
     ### --- update frame content---
     def refreshFrame(self):
-        #print('refreshFrame')
+        print('refreshFrame:', self.frameIndex)
         self.curFrame = self.videoFrames[self.frameIndex].copy()
         self.curMask = self.maskFrames[self.frameIndex].copy()
         self.drawFrame()
@@ -278,6 +278,14 @@ class VideoInpaint(PgmBase):
             self.drawRect(self.selectionPts)
 
     ### --- canvas drawing funcs ---
+    def destroyDrawObjects(self):
+        if self.idRectangle:
+            self.canvas.delete(self.idRectangle)
+            self.idRectangle = -1
+        for id in self.circles:  
+            self.canvas.delete(id)
+        self.circles = []
+
     def drawRect(self, pts):   
         if len(pts) == 4 and self.isSelection : 
             color = 'red' #if self.isSelection else 'purple'
@@ -292,11 +300,8 @@ class VideoInpaint(PgmBase):
                                                         width=2,
                                                         dash=dash)
         else:
-            # destroy drawing objects
-            if self.idRectangle:
-                self.canvas.delete(self.idRectangle)
-                self.idRectangle = -1
-        
+            self.destroyDrawObjects()
+
         # update circles
         for id in self.circles:  
             self.canvas.delete(id)
@@ -314,7 +319,7 @@ class VideoInpaint(PgmBase):
 
     def mouseLClick(self, event):
         if self.isSelection:
-            if self.hitTestImageRect(self.imageClickPos):
+            if self.hitTestImageRect(event, self.imageClickPos):
                 print('({}, {})'.format(self.imageClickPos[0], self.imageClickPos[1]))
                 self.updateCloudPoints(self.imageClickPos)
 
