@@ -16,7 +16,7 @@ class PgmBase(tk.Frame):
     btnPause = None
     btnSnap = None
 
-    mouseLDown = False
+    mouseLeftDown = False
     imgPosX = 0
     imgPosY = 0
 
@@ -29,9 +29,9 @@ class PgmBase(tk.Frame):
         # configure window
         screen_width = root.winfo_screenwidth()
         screen_height = root.winfo_screenheight()
-        center = False
+        center = True
         x = (screen_width - width)//2 if center else 0
-        y = (screen_height - height)//2 if center else 0
+        y = 50 if center else 0
         self.border = 2
         self.padding = 2
         self.title = 20
@@ -39,7 +39,7 @@ class PgmBase(tk.Frame):
         self.root.width = width + self.padding*2 + self.border*2
         self.root.height = height + self.msgHeight + self.btnHeight + self.border*2 + self.padding*2+ self.title
         geometry = '{0:d}x{1:d}+{2:d}+{3:d}'.format(root.width, root.height, x, y) 
-        root.geometry(geometry)    # ex. root.geometry('600x400+250+150')
+        root.geometry(geometry)    # ex. root.geometry('600x400+250+50')
         root.resizable(False, False)
         self.root.title('Image Viewer')
         self.imageStartPos = (0, 0)
@@ -53,6 +53,10 @@ class PgmBase(tk.Frame):
         btn = None
         if widget == 'brush':
             btn = self.btnBrush
+        elif widget == 'brush_add':
+            btn = self.btnBrushAdd
+        elif widget == 'brush_erase':
+            btn = self.btnBrushErase
         elif widget == 'blend':
             btn = self.btnBlend
 
@@ -62,18 +66,22 @@ class PgmBase(tk.Frame):
             else:
                 btn.configure(foreground = 'black')
 
+    def changeCursor(self, style):
+        self.canvas.config(cursor = style)
+
     def bindBtnEvents(self):
         self.root.protocol("WM_DELETE_WINDOW", self.onExit)
         self.root.bind("<Configure>", self.onResize)
-        self.root.bind_all('<Key>', self.onKey)                 # pure virtual
-        self.btnPrev['command'] = lambda : self.onPrev()        # pure virtual
-        self.btnNext['command'] = lambda : self.onNext()        # pure virtual
-        self.btnBrush['command'] = lambda : self.onBrush()      # pure virtual
-        self.btnBlend['command'] = lambda : self.onBlend()      # pure virtual
-        self.btnReset['command'] = lambda : self.onReset()      # pure virtual
-        self.btnSave['command'] = lambda : self.onSave()        # pure virtual
+        self.root.bind_all('<Key>', self.onKey)                         # pure virtual
+        self.btnPrev['command'] = lambda : self.onPrev()                # pure virtual
+        self.btnNext['command'] = lambda : self.onNext()                # pure virtual
+        self.btnBrush['command'] = lambda : self.onBrush()              # pure virtual
+        self.btnBrushAdd['command'] = lambda : self.onBrushAdd()        # pure virtual
+        self.btnBrushErase['command'] = lambda : self.onBrushErase()    # pure virtual
+        self.btnBlend['command'] = lambda : self.onBlend()              # pure virtual
+        self.btnReset['command'] = lambda : self.onReset()              # pure virtual
+        self.btnSave['command'] = lambda : self.onSave()                # pure virtual
       
-        
         # mouse events
         self.root.bind('<Motion>', self.mouseMove)              
         self.root.bind("<Button-1>", self.mouseLDown)
@@ -90,19 +98,17 @@ class PgmBase(tk.Frame):
         self.lblMsg['text'] = msg
     
     def mouseLDown(self, event):
-        self.mouseLDown = True
+        self.mouseLeftDown = True
         x, y = event.x, event.y
         self.imageClickPos = (x-self.imageStartPos[0], y-self.imageStartPos[1])
         self.mouseLClick(event)
 
+    def mouseLRelease(self, event):
+        self.mouseLeftDown = False
+
     # virtual func
     def mouseLClick(self, event):
-        #print('mouseLClick')
-        None
-
-    def mouseLRelease(self, event):
-        #print('mouseLRelease')
-        self.mouseLDown = False
+        print('mouseLClick')
     
     # virtual func
     def mouseWheel(self, event):
@@ -148,7 +154,6 @@ class PgmBase(tk.Frame):
 
         self.imgWidth = self.root.width - self.padding*2 - self.border*2
         self.imgHeight = self.root.height - self.btnHeight - self.msgHeight - self.padding*2 - self.border*2
-        #self.divImg = tk.Frame(self.root,  width=self.imgWidth , height=self.imgHeight , bg='gray')
         self.canvas = tk.Canvas(self.root,  width=self.imgWidth , height=self.imgHeight , bg='gray')
         divBtnArea = tk.Frame(self.root,  width=self.imgWidth , height=self.btnHeight , bg='white')
         divMsg = tk.Frame(self.root,  width=self.imgWidth , height=self.msgHeight , bg='black')
@@ -172,6 +177,12 @@ class PgmBase(tk.Frame):
 
         self.btnBrush = tk.Button(divBtnArea, text='brush')
         self.btnBrush.pack(side='left')
+        
+        self.btnBrushAdd = tk.Button(divBtnArea, text='+')
+        self.btnBrushAdd.pack(side='left')        
+        
+        self.btnBrushErase = tk.Button(divBtnArea, text='-')
+        self.btnBrushErase.pack(side='left')
 
         self.btnBlend = tk.Button(divBtnArea, text='blend')
         self.btnBlend.pack(side='left')
@@ -205,6 +216,14 @@ class PgmBase(tk.Frame):
     # virtual func
     def onBrush(self):
         print('onBrush')
+
+    # virtual func
+    def onBrushAdd(self):
+        print('onBrushAdd')
+
+    # virtual func
+    def onBrushErase(self):
+        print('onBrushErase')
 
     # virtual func
     def onBlend(self):

@@ -31,9 +31,11 @@ class VideoInpaint(PgmBase):
 
     blending = False
     alpha = 1.0
-    debugPoints = None
+
     isBrushing = False
+    isBrushAdd = True
     brushSize = 10
+    autoBlending = False
 
     
     def __init__(self, root, width=800, height=600, args=[]):
@@ -64,7 +66,7 @@ class VideoInpaint(PgmBase):
             frame = self.loadImage(filename)
             self.videoFrames.append(frame)
             if firstFrame:
-                self.curFrame = frame
+                self.curFrame = frame.copy()
                 firstFrame = False
 
 
@@ -78,30 +80,61 @@ class VideoInpaint(PgmBase):
             frame_mask = self.loadImage(filename)
             self.maskFrames.append(frame_mask)
             if firstMask:
-                self.curMask = frame_mask
+                self.curMask = frame_mask.copy()
                 firstMask = False
                 self.drawFrame()  
 
 
     ### --- overrite button handlers ---
-    # virtual func
     def onPrev(self):
         if self.frameIndex > 0 :
             self.frameIndex = self.frameIndex-1
-            self.drawFrame()  
+            self.refreshFrame()  
     
-    # virtual func
     def onNext(self):
         if self.frameIndex < len(self.videoFrames)-1 :
             self.frameIndex = self.frameIndex+1
-            self.drawFrame()  
+            self.refreshFrame()  
+
+    def updateBrushStyle(self):
+        self.changeStyle('brush', self.isBrushing)
+        self.changeStyle('brush_add', self.isBrushing and self.isBrushAdd)
+        self.changeStyle('brush_erase', self.isBrushing and not self.isBrushAdd)
+    
+    def autoEnableBlending(self):
+        # auto enable blending, as brush is used to change mask
+        if self.isBrushing and not self.blending:
+            self.onBlend()
+            self.autoBlending = True
+
+        # undo blending if it is enabled by auto blending
+        if not self.isBrushing and self.blending and self.autoBlending:
+            self.autoBlending = False
+            self.onBlend() 
 
     def onBrush(self):
         self.isSelection = False
         self.isBrushing = not self.isBrushing
-        self.changeStyle('brush', self.isBrushing)
-    
+        self.updateBrushStyle()
+        
+        # update cursor
+        style = "circle" if self.isBrushing else "arrow"
+        self.changeCursor(style)
+
+        self.autoEnableBlending()
+
+    def onBrushAdd(self):
+        self.isBrushAdd = True
+        self.updateBrushStyle()
+        self.autoEnableBlending()
+
+    def onBrushErase(self):
+        self.isBrushAdd = False
+        self.updateBrushStyle()
+        self.autoEnableBlending()
+
     def onBlend(self):
+        self.autoBlending = False
         self.isSelection = False
         self.blending = not self.blending
         self.changeStyle('blend', self.blending)
@@ -125,28 +158,28 @@ class VideoInpaint(PgmBase):
     ### --- event handlers ---
     def onKey(self, event):
         if event.char == event.keysym or len(event.char) == 1:
-            if event.keysym == 'k':
-                self.onK()
-            elif event.keysym == 'r':
-                self.onR()
-            elif event.keysym == 'h':
-                self.onH()
-            elif event.keysym == 's' or event.keysym == 'p':
-                self.onPlay()
+            if event.keysym in ['Left', 'Right', 'Up', 'Down'] :
+                self.onKeyArrors(event.keysym)
             elif event.keysym == 'space':
                 self.onSpace()     
             elif event.keysym == 'Escape':
                 self.onExit()
+            
+        else:
+            print (event.keysym)
     
-    def onK(self):
-        None
-    
-    def onR(self):
-        None
-    
-    def onH(self):
-        None  
-    
+    def onKeyArrors(self, keysym):
+        if keysym == 'Left' :
+            self.onPrev()
+        elif keysym == 'Right' :
+            self.onNext()
+        else:
+            if keysym == 'Up' :
+                self.frameIndex = 0
+            elif keysym == 'Down' :
+                self.frameIndex = len(self.videoFrames)-1
+            self.refreshFrame() 
+
     def onSpace(self):
         self.isSelection = False
 
@@ -205,14 +238,20 @@ class VideoInpaint(PgmBase):
         print('thread stopped, all frames in memery...')
     
     ### --- update frame content---
-    def drawFrame(self):
-        # draw on canvas
+    def refreshFrame(self):
+        #print('refreshFrame')
         self.curFrame = self.videoFrames[self.frameIndex].copy()
         self.curMask = self.maskFrames[self.frameIndex].copy()
+        self.drawFrame()
+
+    def drawFrame(self):
+        # draw on canvas
         if self.blending:
+            if self.mouseLeftDown:
+                self.curFrame = self.videoFrames[self.frameIndex].copy()
             beta = ( 1.0 - self.args.alpha )
-            cv2.addWeighted( self.curFrame, self.args.alpha, self.curMask, beta, 0.0, self.curFrame)
-            
+            cv2.addWeighted( self.curMask, self.args.alpha, self.curFrame, beta, 0.0, self.curFrame)
+
         self.updateImage(self.curFrame)
         if self.drawRectangle:
             self.drawRect(self.selectionPts)
@@ -279,12 +318,19 @@ class VideoInpaint(PgmBase):
                 print('({}, {})'.format(self.imageClickPos[0], self.imageClickPos[1]))
                 self.updateCloudPoints(self.imageClickPos)
 
+    def mouseLRelease(self, event):
+        super().mouseLRelease(event) 
+        self.maskFrames[self.frameIndex] = self.curMask.copy()
+        self.refreshFrame()
+
     def mouseMove(self, event):
         super().mouseMove(event) 
-        if not self.isSelection and self.isBrushing and self.mouseLDown:
+        if not self.isSelection and self.isBrushing and self.mouseLeftDown:
             #print('painting', self.imgPosX, self.imgPosY)
-            color = (0,0,255)
+            color = (64, 128, 64)
             cv2.circle(self.curFrame, (self.imgPosX, self.imgPosY), self.brushSize, color, -1)
+            maskColor = (255, 255, 255) if self.isBrushAdd else  (0, 0, 0)
+            cv2.circle(self.curMask, (self.imgPosX, self.imgPosY), self.brushSize, maskColor, -1)
             self.drawFrame()
     
     def mouseWheel(self, event):
@@ -298,7 +344,7 @@ if __name__ == '__main__':
     parser.add_argument('--data', default='data/tennis', help="input data folder")
     parser.add_argument('--mask', default='data/tennis_mask', help="input data mask folder")
     parser.add_argument('--video', default='data/cheetah.mp4', help="input video")
-    parser.add_argument('--alpha', default=0.8, help="alpha blending") 
+    parser.add_argument('--alpha', default=0.2, help="alpha blending") 
 
     # RAFT model arguments
     '''
