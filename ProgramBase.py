@@ -183,10 +183,10 @@ class PgmBase(tk.Frame):
         self.btnBrush = tk.Button(divBtnArea, text='brush')
         self.btnBrush.pack(side='left')
         
-        self.btnBrushAdd = tk.Button(divBtnArea, text='+')
+        self.btnBrushAdd = tk.Button(divBtnArea, text=' + ')
         self.btnBrushAdd.pack(side='left')        
         
-        self.btnBrushErase = tk.Button(divBtnArea, text='-')
+        self.btnBrushErase = tk.Button(divBtnArea, text=' - ')
         self.btnBrushErase.pack(side='left')
 
         self.btnBlend = tk.Button(divBtnArea, text='blend')

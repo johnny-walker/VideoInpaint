@@ -12,7 +12,7 @@ import glob
 # import own modules
 from ProgramBase import PgmBase
 from ThreadBase import ThreadClass
-from PixelUtil import Pixels
+from Utils import Pixels
 
 class VideoInpaint(PgmBase):
     videoObject = None
@@ -141,16 +141,10 @@ class VideoInpaint(PgmBase):
         self.drawFrame()  
 
     def onReset(self):
-        self.threadEventPlayback.clear()
+        # reset selection
         self.showMessage("reset")
         self.selectionPts = []          
-        if self.idRectangle:
-            self.canvas.delete(self.idRectangle)
-            self.idRectangle = -1 
-        if len(self.circles) > 0:
-            for id in self.circles:  
-                self.canvas.delete(id)
-            self.circles = []
+        self.destroyDrawObjects()
 
     def onSave(self):
         None
