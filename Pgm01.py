@@ -50,16 +50,16 @@ class VideoInpaint(PgmBase):
 
         self.pixels = Pixels()
 
-    def openVideo(self, path):
-        self.videofile = path
+    def openVideo(self):
+        self.videofile = self.args.video
         if self.videofile:
             self.showMessage("playback video file: {0:s}".format(self.videofile))
             self.startThread()
 
-    def loadData(self, data, mask):
-        # load video
-        filename_list = glob.glob(os.path.join(data, '*.png')) + \
-                        glob.glob(os.path.join(data, '*.jpg'))
+    def loadData(self):
+        # load data frames
+        filename_list = glob.glob(os.path.join(self.args.path, '*.png')) + \
+                        glob.glob(os.path.join(self.args.path, '*.jpg'))
 
         firstFrame = True
         for filename in sorted(filename_list):
@@ -70,11 +70,10 @@ class VideoInpaint(PgmBase):
                 firstFrame = False
 
 
-        # load frame mask list.
-        filename_list = glob.glob(os.path.join(mask, '*.png')) + \
-                        glob.glob(os.path.join(mask, '*.jpg'))
-
         # load mask
+        filename_list = glob.glob(os.path.join(self.args.mask, '*.png')) + \
+                        glob.glob(os.path.join(self.args.mask, '*.jpg'))
+
         firstMask = True
         for filename in sorted(filename_list):
             frame_mask = self.loadImage(filename)
@@ -340,7 +339,7 @@ class VideoInpaint(PgmBase):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data', default='data/tennis', help="input data folder")
+    parser.add_argument('--path', default='data/tennis', help="input data folder")
     parser.add_argument('--mask', default='data/tennis_mask', help="input data mask folder")
     parser.add_argument('--video', default='data/cheetah.mp4', help="input video")
     parser.add_argument('--alpha', default=0.2, help="alpha blending") 
@@ -355,17 +354,17 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # process first file to get shape
-    filename_list = glob.glob(os.path.join(args.data, '*.png')) + \
-                    glob.glob(os.path.join(args.data, '*.jpg'))
+    filename_list = glob.glob(os.path.join(args.path, '*.png')) + \
+                    glob.glob(os.path.join(args.path, '*.jpg'))
     
     if len(filename_list) > 0:
         img = cv2.imread(filename_list[0])
         height, width = img.shape[0], img.shape[1]
         img = None
         program = VideoInpaint(tk.Tk(), width, height, args)
-        program.loadData(args.data, args.mask)
+        program.loadData()
     else:   # process video
         program = VideoInpaint(tk.Tk(), 1280, 720, args)
-        program.openVideo(args.video)
+        program.openVideo()
     
     program.run()

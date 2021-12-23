@@ -12,10 +12,9 @@
             //"program": "${file}",
             "program": "Pgm01.py",
             "console": "integratedTerminal",
-            "args" : ["--data", "data/cheetah", 
+            "args" : ["--path", "data/cheetah", 
                       "--mask", "data/cheetah_mask",
-
-         ],
+                     ],
         }
     ]
 }
