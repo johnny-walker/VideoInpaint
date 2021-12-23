@@ -34,10 +34,9 @@ class VideoInpaint(PgmBase):
 
     isBrushing = False
     isBrushAdd = True
-    brushSize = 10
+    brushSize = 20
     autoBlending = False
 
-    
     def __init__(self, root, width=800, height=600, args=[]):
         super().__init__(root, width, height)
         self.title = 'Frame Viewer'
@@ -53,7 +52,7 @@ class VideoInpaint(PgmBase):
     def openVideo(self):
         self.videofile = self.args.video
         if self.videofile:
-            self.showMessage("playback video file: {0:s}".format(self.videofile))
+            self.showMessage("Open video : {0:s}".format(self.videofile))
             self.startThread()
 
     def loadData(self):
@@ -68,7 +67,6 @@ class VideoInpaint(PgmBase):
             if firstFrame:
                 self.curFrame = frame.copy()
                 firstFrame = False
-
 
         # load mask
         filename_list = glob.glob(os.path.join(self.args.mask, '*.png')) + \
@@ -87,13 +85,15 @@ class VideoInpaint(PgmBase):
     ### --- overrite button handlers ---
     def onPrev(self):
         if self.frameIndex > 0 :
-            self.frameIndex = self.frameIndex-1
-            self.refreshFrame()  
+            self.frameIndex -= 1
+            self.refreshFrame() 
+            self.showMessage("Navigate to frame - {0}".format(self.frameIndex))
     
     def onNext(self):
         if self.frameIndex < len(self.videoFrames)-1 :
-            self.frameIndex = self.frameIndex+1
+            self.frameIndex += 1
             self.refreshFrame()  
+            self.showMessage("Navigate to frame - {0}".format(self.frameIndex))
 
     def updateBrushStyle(self):
         self.changeBtnStyle('brush', self.isBrushing)
@@ -141,12 +141,22 @@ class VideoInpaint(PgmBase):
 
     def onReset(self):
         # reset selection
-        self.showMessage("reset")
+        self.showMessage("Selection reset")
         self.selectionPts = []          
         self.destroyDrawObjects()
 
     def onSave(self):
-        None
+        if len(self.maskFrames) > 0:
+            folderPath = filedialog.askdirectory()
+            if len(folderPath) > 0 : # if Esc path = ''
+                idx = 0
+                for mask in self.maskFrames:
+                    frame_file = os.path.join(folderPath, "{:06d}_mask.jpg".format(idx))
+                    cv2.imwrite(frame_file, mask)
+                    idx += 1
+                self.showMessage("Mask saved to folder: {0}".format(folderPath))
+            else:
+                self.showMessage("Escape saving")
 
     ### --- event handlers ---
     def onKey(self, event):
@@ -157,7 +167,6 @@ class VideoInpaint(PgmBase):
                 self.onSpace()     
             elif event.keysym == 'Escape':
                 self.onExit()
-            
         else:
             print (event.keysym)
     
@@ -171,6 +180,7 @@ class VideoInpaint(PgmBase):
         elif keysym == 'Down' :
             self.frameIndex = len(self.videoFrames)-1
         self.refreshFrame() 
+        self.showMessage("Navigate to frame - {0}".format(self.frameIndex))
 
     def onSpace(self):
         self.isSelection = False
@@ -232,7 +242,6 @@ class VideoInpaint(PgmBase):
     
     ### --- update frame content---
     def refreshFrame(self):
-        print('refreshFrame:', self.frameIndex)
         self.curFrame = self.videoFrames[self.frameIndex].copy()
         self.curMask = self.maskFrames[self.frameIndex].copy()
         self.drawFrame()
@@ -249,27 +258,6 @@ class VideoInpaint(PgmBase):
         if self.drawRectangle:
             self.drawRect(self.selectionPts)
  
-    # (mouse selection) add control points
-    def updateCloudPoints(self, mousePt):
-        def _replaceNearestSelectionPt(mousePt):
-            mindist = 1000000
-            indexMin = index = 0
-            for pt in self.selectionPts:
-                dist = self.pixels.norm2Distance(mousePt, pt)
-                if dist < mindist:
-                    mindist = dist
-                    indexMin = index
-                index += 1
-            self.selectionPts[indexMin] = mousePt
-
-        if len(self.selectionPts) < 4:
-            self.selectionPts.append(mousePt)
-        else:
-            _replaceNearestSelectionPt(mousePt)
-        
-        if self.drawRectangle:
-            self.drawRect(self.selectionPts)
-
     ### --- canvas drawing funcs ---
     def destroyDrawObjects(self):
         if self.idRectangle:
@@ -304,11 +292,32 @@ class VideoInpaint(PgmBase):
                 id = self.create_circle(p[0]+self.imageStartPos[0], p[1]+self.imageStartPos[1], 2, self.canvas)
                 self.circles.append(id)
     
-    # params: center coordinates, radius
+    # (x,y): center, r: radius
     def create_circle(self, x, y, r, canvas): 
         x0, y0 = x-r, y-r
         x1, y1 = x+r, y+r
         return canvas.create_oval(x0, y0, x1, y1, fill="orange", outline='orange', width=3)
+
+    # selection to add control points
+    def updateCloudPoints(self, mousePt):
+        def _replaceNearestSelectionPt(mousePt):
+            mindist = 1000000
+            indexMin = index = 0
+            for pt in self.selectionPts:
+                dist = self.pixels.norm2Distance(mousePt, pt)
+                if dist < mindist:
+                    mindist = dist
+                    indexMin = index
+                index += 1
+            self.selectionPts[indexMin] = mousePt
+
+        if len(self.selectionPts) < 4:
+            self.selectionPts.append(mousePt)
+        else:
+            _replaceNearestSelectionPt(mousePt)
+        
+        if self.drawRectangle:
+            self.drawRect(self.selectionPts)
 
     def mouseLClick(self, event):
         if self.isSelection:
@@ -335,7 +344,7 @@ class VideoInpaint(PgmBase):
         if self.isBrushing:
             self.brushSize += event.delta
             self.brushSize = max(self.brushSize, 3)
-            self.showMessage("brush size = {0:03d}".format(self.brushSize))
+            self.showMessage("Brush size = {0:03d}".format(self.brushSize))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
